@@ -64,11 +64,28 @@ methane<-spTransform(methane, crs)
 #generate a raster to interpolate spatial points onto
 r <- raster(xmn=bbox(methane)[1], xmx=bbox(methane)[3], ymn=bbox(methane)[2], ymx=bbox(methane)[4])
 projection(r) <- projection(methane)
-res(r) <- 50
+res(r) <- 100
 
 #rasterize and plot the raw data, averaging values if more than one obs per cell
-rr<-rasterize(methane_filtered, r, field="ppb", fun=mean) 
-plot(rr, main="Methane Concentrations (ppb)")
+library(fields)
+rr<-rasterize(methane, r, field="ppb", fun=mean)
+
+brk<-c(0,30,60,100,200,300,400,500) 
+rgb.palette <- colorRampPalette(c("red", "orange", "green", "blue"))
+plot(rr, breaks = brk, col=rev(rgb.palette(7)), main="Methane Concentrations (ppb)")
+#plot(rr, col=rev(rgb.palette(255)), horizontal = TRUE, main="Methane Concentrations (ppb)")
+
+#write a kml of the raster
+rr.kml<-projectRaster(rr, crs="+proj=longlat +datum=WGS84")
+KML(rr.kml, "methane_100m.kml", col=rev(rgb.palette(255)))
+
+#=======================================================
+#  interpolate to raster
+#=======================================================
+#generate a raster to interpolate spatial points onto
+r <- raster(xmn=bbox(methane)[1], xmx=bbox(methane)[3], ymn=bbox(methane)[2], ymx=bbox(methane)[4])
+projection(r) <- projection(methane)
+res(r) <- 100
 
 #set up an inverse distance weighting model for interpolation
 mg <- gstat(id = "ppb", formula = ppb~1, data=methane)
@@ -78,6 +95,9 @@ z <- interpolate(r, mg)
 #write the raster
 writeRaster(z, "methane_idw_interp.asc")
 
+#write a kml of the raster
+z.kml<-projectRaster(z, crs="+proj=longlat +datum=WGS84")
+KML(z.kml, "methane.kml")
 
 
 
